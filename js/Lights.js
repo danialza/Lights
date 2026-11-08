@@ -9021,7 +9021,7 @@ LIGHTS.CannonManager.prototype = {
 			for( i = 0; i < il; i++ )
 				tiles[ i ].update();
 
-			if( LIGHTS.time >= 208 )
+			if( LIGHTS.time >= LIGHTS.Music.phase.times[ 22 ] - 2 )
 				this.fadeMaterials();
 		}
 	},

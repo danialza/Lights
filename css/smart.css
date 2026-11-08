@@ -1,0 +1,550 @@
+/* Lights Smart — song picker, analysis status, in-experience controls */
+
+:root {
+	--sp-pink:   #ff1561;
+	--sp-yellow: #fff014;
+	--sp-green:  #14ff9d;
+	--sp-cyan:   #14d4ff;
+	--sp-orange: #ff9d14;
+	--sp-text:   #f4f4f4;
+	--sp-muted:  rgba( 255, 255, 255, 0.62 );
+	--sp-line:   rgba( 255, 255, 255, 0.16 );
+	--sp-glass:  rgba( 6, 6, 10, 0.62 );
+}
+
+#smart_panel {
+	position: absolute;
+	top: calc( 50% + 108px );
+	left: 50%;
+	z-index: 20;
+	box-sizing: border-box;
+	width: min( 600px, calc( 100vw - 32px ) );
+	padding: 18px 20px 16px;
+	transform: translate( -50%, 12px );
+	border: 1px solid var( --sp-line );
+	border-radius: 18px;
+	background: var( --sp-glass );
+	-webkit-backdrop-filter: blur( 14px );
+	backdrop-filter: blur( 14px );
+	color: var( --sp-text );
+	font-family: 'PT Sans Narrow', sans-serif;
+	letter-spacing: 0.04em;
+	text-align: center;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.6s ease 0.4s, transform 0.6s ease 0.4s, visibility 0s linear 1s;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+#smart_panel [hidden] {
+	display: none !important;
+}
+
+#smart_panel.sp-visible {
+	opacity: 1;
+	visibility: visible;
+	transform: translate( -50%, 0 );
+	transition: opacity 0.6s ease 0.4s, transform 0.6s ease 0.4s, visibility 0s;
+}
+
+body.smart-playing #smart_panel {
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+}
+
+/* The panel takes the place of the original info text (its hint moves into the panel) */
+#lights_info {
+	display: none;
+}
+
+.sp-title {
+	font-size: 22px;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	font-weight: 700;
+}
+
+.sp-sub {
+	margin: 6px auto 0;
+	max-width: 480px;
+	color: var( --sp-muted );
+	font-size: 15px;
+	line-height: 1.5;
+}
+
+.sp-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 8px;
+	margin-top: 14px;
+}
+
+.sp-btn {
+	min-height: 40px;
+	padding: 0 16px;
+	border: 1px solid var( --sp-line );
+	border-radius: 999px;
+	background: rgba( 255, 255, 255, 0.06 );
+	color: var( --sp-text );
+	font: 700 15px 'PT Sans Narrow', sans-serif;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+.sp-btn:hover {
+	border-color: rgba( 255, 255, 255, 0.4 );
+	background: rgba( 255, 255, 255, 0.12 );
+}
+
+.sp-btn:focus-visible,
+.sp-link:focus-visible,
+#smart_exit:focus-visible {
+	outline: 2px solid var( --sp-cyan );
+	outline-offset: 2px;
+}
+
+.sp-btn.sp-primary {
+	border-color: transparent;
+	background: #fff;
+	color: #0b0b0b;
+	box-shadow: 0 0 22px rgba( 255, 21, 97, 0.45 ), 0 0 44px rgba( 20, 212, 255, 0.25 );
+}
+
+.sp-btn.sp-primary:hover {
+	background: #fff;
+	box-shadow: 0 0 26px rgba( 255, 21, 97, 0.65 ), 0 0 52px rgba( 20, 212, 255, 0.4 );
+}
+
+.sp-btn.sp-ghost {
+	background: transparent;
+	color: var( --sp-muted );
+}
+
+.sp-btn:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.sp-hint {
+	margin-top: 10px;
+	color: var( --sp-muted );
+	font-size: 12px;
+}
+
+.sp-status {
+	margin-top: 14px;
+}
+
+.sp-status-text {
+	font-size: 13px;
+	line-height: 1.8;
+}
+
+.sp-status.sp-error .sp-status-text {
+	color: #ff8aa8;
+}
+
+.sp-status.sp-error .sp-bar {
+	display: none;
+}
+
+.sp-bar {
+	height: 4px;
+	margin-top: 8px;
+	overflow: hidden;
+	border-radius: 4px;
+	background: rgba( 255, 255, 255, 0.12 );
+}
+
+.sp-bar-fill {
+	width: 0;
+	height: 100%;
+	border-radius: 4px;
+	background: linear-gradient( 90deg, var( --sp-pink ), var( --sp-yellow ), var( --sp-green ), var( --sp-cyan ) );
+	transition: width 0.25s ease;
+}
+
+/* Compact state: song chosen and analyzed */
+#smart_panel.sp-compact .sp-head,
+#smart_panel.sp-compact .sp-actions,
+#smart_panel.sp-compact .sp-hint,
+#smart_panel.sp-compact .sp-mine {
+	display: none;
+}
+
+#smart_panel.sp-compact {
+	padding: 14px 18px 12px;
+}
+
+.sp-song {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	font-size: 16px;
+	font-weight: 700;
+}
+
+.sp-name {
+	overflow: hidden;
+	max-width: 100%;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	unicode-bidi: plaintext;
+}
+
+.sp-dot {
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var( --sp-green );
+	box-shadow: 0 0 10px var( --sp-green );
+}
+
+.sp-meta {
+	margin-top: 4px;
+	color: var( --sp-muted );
+	font-size: 13px;
+}
+
+.sp-sep {
+	opacity: 0.5;
+}
+
+.sp-timeline {
+	display: flex;
+	direction: ltr;
+	gap: 2px;
+	height: 22px;
+	margin-top: 10px;
+	overflow: hidden;
+	border-radius: 6px;
+}
+
+.sp-seg {
+	--h: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 3px;
+	overflow: hidden;
+	background: hsl( var( --h ), 85%, var( --l, 40% ) );
+}
+
+.sp-seg i {
+	color: rgba( 0, 0, 0, 0.72 );
+	font-size: 10px;
+	font-style: normal;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+/* Vocal lane + phase-change markers under the section timeline */
+.sp-lanes {
+	position: relative;
+	height: 12px;
+	margin-top: 3px;
+	direction: ltr;
+}
+
+.sp-voc {
+	position: absolute;
+	top: 5px;
+	height: 3px;
+	border-radius: 2px;
+	background: rgba( 255, 255, 255, 0.75 );
+}
+
+.sp-mark {
+	position: absolute;
+	top: 0;
+	width: 2px;
+	height: 12px;
+	margin-left: -1px;
+	border-radius: 1px;
+}
+
+.sp-mark-vocal,
+.sp-key-vocal { background: var( --sp-pink ); }
+
+.sp-mark-vocal-end { background: rgba( 255, 21, 97, 0.5 ); }
+
+.sp-mark-tempo,
+.sp-key-tempo { background: var( --sp-yellow ); }
+
+.sp-mark-rhythm,
+.sp-key-rhythm { background: var( --sp-cyan ); }
+
+.sp-legend {
+	margin-top: 4px;
+	color: var( --sp-muted );
+	font-size: 12px;
+}
+
+.sp-key {
+	display: inline-block;
+	width: 10px;
+	height: 3px;
+	margin: 0 5px 2px 12px;
+	vertical-align: middle;
+	border-radius: 2px;
+}
+
+.sp-key:first-child {
+	margin-left: 0;
+}
+
+.sp-key-voc {
+	background: rgba( 255, 255, 255, 0.75 );
+}
+
+.sp-key-vocal,
+.sp-key-tempo,
+.sp-key-rhythm {
+	width: 2px;
+	height: 10px;
+	margin-bottom: 0;
+}
+
+.sp-intro  { --h: 191; }
+.sp-verse  { --h: 155; }
+.sp-chorus { --h: 341; }
+.sp-bridge { --h: 35; }
+.sp-drop   { --h: 56; }
+.sp-outro  { --h: 191; }
+
+.sp-show {
+	margin-top: 8px;
+	color: var( --sp-muted );
+	font-size: 13px;
+}
+
+.sp-remix {
+	margin: 0 0 0 4px;
+	padding: 2px 6px;
+}
+
+.sp-mine {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 6px;
+	margin-top: 10px;
+}
+
+.sp-mine-label {
+	color: var( --sp-muted );
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+}
+
+.sp-chip {
+	max-width: 260px;
+	padding: 4px 12px;
+	overflow: hidden;
+	border: 1px solid rgba( 20, 212, 255, 0.45 );
+	border-radius: 999px;
+	background: rgba( 20, 212, 255, 0.08 );
+	color: var( --sp-text );
+	font: 700 13px 'PT Sans Narrow', sans-serif;
+	letter-spacing: 0.04em;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.sp-chip:hover {
+	background: rgba( 20, 212, 255, 0.18 );
+}
+
+.sp-chip:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.sp-go {
+	margin-top: 10px;
+	font-size: 14px;
+}
+
+.sp-tip {
+	margin-top: 4px;
+	color: var( --sp-muted );
+	font-size: 12px;
+}
+
+.sp-go b {
+	font-family: 'PT Sans Narrow', sans-serif;
+	letter-spacing: 0.08em;
+}
+
+.sp-link {
+	margin-top: 6px;
+	padding: 4px 8px;
+	border: 0;
+	background: none;
+	color: var( --sp-cyan );
+	font: 700 14px 'PT Sans Narrow', sans-serif;
+	letter-spacing: 0.06em;
+	cursor: pointer;
+}
+
+.sp-link:hover {
+	text-decoration: underline;
+}
+
+/* Drag & drop */
+body.smart-dragging #smart_panel {
+	border-color: var( --sp-cyan );
+	box-shadow: 0 0 0 2px rgba( 20, 212, 255, 0.35 ), 0 0 40px rgba( 20, 212, 255, 0.3 );
+}
+
+/* Exit button during the experience */
+#smart_exit {
+	position: absolute;
+	top: 18px;
+	left: 18px;
+	z-index: 20;
+	width: 36px;
+	height: 36px;
+	border: 1px solid var( --sp-line );
+	border-radius: 50%;
+	background: rgba( 0, 0, 0, 0.35 );
+	color: #fff;
+	font-size: 15px;
+	line-height: 1;
+	opacity: 0;
+	visibility: hidden;
+	cursor: pointer;
+	transition: opacity 0.3s;
+}
+
+body.smart-playing #smart_exit {
+	opacity: 0.35;
+	visibility: visible;
+}
+
+body.smart-playing #smart_exit:hover {
+	opacity: 1;
+}
+
+/* Light flash over the scene, driven by the music */
+#smart_flash {
+	--flash: #ffffff;
+	position: absolute;
+	inset: 0;
+	z-index: 5;
+	opacity: 0;
+	pointer-events: none;
+	mix-blend-mode: screen;
+	background:
+		radial-gradient( ellipse 75% 65% at 50% 58%, var( --flash ) 0%, transparent 72% ),
+		radial-gradient( ellipse 40% 30% at 50% 55%, rgba( 255, 255, 255, 0.8 ) 0%, transparent 70% );
+}
+
+body:not( .smart-playing ) #smart_flash {
+	display: none;
+}
+
+#smart_toast {
+	position: absolute;
+	top: 20px;
+	left: 50%;
+	z-index: 21;
+	padding: 8px 16px;
+	border-radius: 999px;
+	background: rgba( 0, 0, 0, 0.6 );
+	color: var( --sp-text );
+	font: 700 14px 'PT Sans Narrow', sans-serif;
+	letter-spacing: 0.06em;
+	opacity: 0;
+	transform: translate( -50%, -6px );
+	pointer-events: none;
+	transition: opacity 0.2s, transform 0.2s;
+}
+
+#smart_toast.on {
+	opacity: 1;
+	transform: translate( -50%, 0 );
+}
+
+/* HUD (toggle with H) */
+#smart_hud {
+	position: absolute;
+	right: 18px;
+	bottom: 16px;
+	z-index: 20;
+	display: none;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 12px;
+	border-radius: 999px;
+	background: rgba( 0, 0, 0, 0.45 );
+	color: var( --sp-muted );
+	font: 13px 'PT Sans Narrow', sans-serif;
+}
+
+body.smart-hud #smart_hud {
+	display: flex;
+}
+
+.sh-beat {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: rgba( 255, 255, 255, 0.25 );
+}
+
+.sh-beat.on {
+	animation: sh-pulse 0.25s ease-out;
+}
+
+@keyframes sh-pulse {
+	from { background: var( --sp-pink ); box-shadow: 0 0 12px var( --sp-pink ); transform: scale( 1.6 ); }
+	to   { background: rgba( 255, 255, 255, 0.25 ); box-shadow: none; transform: scale( 1 ); }
+}
+
+@media ( max-height: 820px ) {
+
+	#smart_panel {
+		top: calc( 50% + 96px );
+	}
+
+	.sp-sub,
+	.sp-tip {
+		display: none;
+	}
+
+	/* The footer credits would sit under the panel */
+	body:not( .smart-playing ) #lights_share,
+	body:not( .smart-playing ) #lights_credits {
+		opacity: 0.3;
+	}
+}
+
+@media ( max-height: 700px ) {
+
+	#smart_panel {
+		top: calc( 50% + 84px );
+	}
+
+	.sp-legend {
+		display: none;
+	}
+}
+
+@media ( max-width: 560px ) {
+
+	.sp-btn {
+		flex: 1 1 calc( 50% - 8px );
+	}
+}
