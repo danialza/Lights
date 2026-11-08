@@ -1,178 +1,242 @@
-# Lights — Smart edition
+<div align="center">
 
-A modified copy of [c4rl05/Lights](https://github.com/c4rl05/Lights) (the HelloEnjoy WebGL
-experience made for Ellie Goulding's *Lights*). The original visuals are driven by data
-hand-made for that one song. This edition analyzes **any song** and drives the same
-choreography from it.
+# Lights · any song
 
-**Live demo:** <https://danialza.github.io/Lights/> (desktop Chrome or Edge recommended).
-Uploaded songs are analyzed in your browser and never leave your computer.
+### HelloEnjoy's 2011 WebGL music experience, taught to dance to *your* music.
 
-## Run locally
+Upload a track, or let it listen to a browser tab, and the whole show is choreographed around it:
+the beat, the bars, the choruses, the breaks and the moment the singer comes in.
 
-The page has to be served over http (opening `index.html` directly as a file won't work,
-because the browser blocks the audio analyzer and the image reads on `file://`).
+<a href="https://danialza.github.io/Lights/"><img src="https://img.shields.io/badge/open_the_live_demo-ff1561?style=for-the-badge" alt="Open the live demo"></a>
 
-**Easiest (macOS):** double-click `start.command` in this folder. A Terminal window opens,
-starts a small local web server and opens the page in your browser. Keep that window open
-while you use it, and close it to stop. The first time, macOS may refuse to open a
-downloaded script; then right-click `start.command` → **Open** → **Open**.
+<img src="https://img.shields.io/badge/runs_in-your_browser-14d4ff?style=flat-square" alt="Runs in your browser">
+<img src="https://img.shields.io/badge/your_songs-never_uploaded-14ff9d?style=flat-square" alt="Your songs are never uploaded">
+<img src="https://img.shields.io/badge/build_step-none-fff014?style=flat-square" alt="No build step">
+<img src="https://img.shields.io/badge/three.js-the_2011_original-ff9d14?style=flat-square" alt="The original 2011 Three.js">
 
-**From a terminal (any OS with Python 3):** in this folder run
+<br><br>
+
+<img src="docs/hero.gif" width="720" alt="Spotlights jumping into a new formation on every beat of the final chorus">
+
+<sub>The final-chorus scene driven by an uploaded song: every beat throws the spotlights into a new formation.</sub>
+
+</div>
+
+---
+
+## ✨ What it does
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### 🎧 Listens
+
+Tempo, beats and bars, energy, choruses and breaks, drum hits, tempo changes, and where someone
+is singing. All of it is analyzed in about a second, in a Web Worker, right in your browser.
+
+</td>
+<td width="33%" valign="top">
+
+### 🎬 Directs
+
+The 2011 show has 23 scenes hand-timed to one song. Here they are fitted to *your* song's
+structure, and every scene change lands on the singer's entry, a drop or a change in the rhythm.
+
+</td>
+<td width="33%" valign="top">
+
+### ⚡ Hits on the beat
+
+Every beat lands as an instant hit: a camera punch, a flash in the sky, pumping ground lights,
+spotlights snapping into a new formation. Harder on the first beat of each bar, still in the breaks.
+
+</td>
+</tr>
+</table>
+
+## 🖼 Scenes
+
+<table>
+<tr>
+<td width="50%"><img src="docs/scene-light-trails.jpg" alt="Light-trails chorus"><br><sub><b>Light trails</b> · the ground dots pump on every beat</sub></td>
+<td width="50%"><img src="docs/scene-verse.jpg" alt="Verse"><br><sub><b>Verse</b> · balloons over glowing terrain lines</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/scene-spotlights.jpg" alt="Spotlight chorus"><br><sub><b>Spotlights</b> · moving heads that jump on the beat</sub></td>
+<td width="50%"><img src="docs/scene-bridge.jpg" alt="Bridge"><br><sub><b>Bridge</b> · the ground ripples with the music's spectrum</sub></td>
+</tr>
+</table>
+
+Every song gets its own running order, one of **12 shows**: the three chorus scenes in any order
+and the two bridges either way round, each show with its own camera framing and sky colour.
+**Remix** steps through them.
+
+## 🚀 Try it
+
+1. Open **[the live demo](https://danialza.github.io/Lights/)** in desktop Chrome or Edge.
+2. Pick a source: **Upload a song** (or drop a file on the page), **Playing audio**,
+   **Microphone**, or the **Original song**.
+3. Wait about a second for the analysis, then press **PLAY**. Move the mouse to steer the voice,
+   click to fly faster.
+
+<p align="center"><img src="docs/ui-panel.jpg" width="640" alt="The song panel: tempo, sections, vocals and why each scene changes"></p>
+
+The panel shows what the analysis found: tempo, length, when the singer enters, the song's
+sections, where the vocals are (white) and why each scene starts where it does (pink: the
+singer, yellow: a tempo change, cyan: a rhythm change).
+
+Songs you upload are **remembered in your browser** (IndexedDB, never sent anywhere): open the
+page again and your latest song is already loaded. Remove one with its ✕.
+
+| Source | What happens |
+| --- | --- |
+| **Upload a song** | The whole file is analyzed first, so the show knows the song's structure in advance. MP3, WAV, OGG, M4A, FLAC: whatever the browser can decode. |
+| **Playing audio** | Share a browser tab (or the screen) with **Share audio** ticked. Tempo, beats, the singer and drops are followed live. Desktop Chrome or Edge. |
+| **Microphone** | The same live analysis on whatever the mic hears: speakers in the room, a band. |
+| **Original song** | Ellie Goulding's *Lights* with the original hand-made timing. |
+
+### Keys
+
+| Key | During playback |
+| --- | --- |
+| Mouse / click | Steer the voice / fly faster |
+| `H` | Show the current section, BPM and why the scene started |
+| `T` | Tap-sync: tap `Space` on the beat 8 times to measure your speakers' delay (Bluetooth, TV) |
+| `[` `]` | Shift the visuals 10 ms later / earlier |
+| `Esc` | Back to the start screen (live mode plays the outro first) |
+| `R` | On the start screen: remix the show |
+
+## 🧠 How it works
+
+```mermaid
+flowchart LR
+    A[Song or live audio] --> B[Analyzer<br/>Web Worker]
+    B --> C[Beats and bars<br/>tempo changes]
+    B --> D[Sections and energy<br/>drops and breaks]
+    B --> E[Vocals, drum hits<br/>spectrum]
+    C --> F[Show program<br/>12 scene orders]
+    D --> F
+    E --> F
+    F --> G[2011 WebGL scenes]
+    C --> H[Beat-locked hits]
+    E --> H
+    H --> G
+```
+
+<details>
+<summary><b>Analysis</b>: what the Web Worker extracts</summary>
+
+- **Beats**: tempo from onset-strength autocorrelation (the octave is chosen from where kick and
+  snare repeat), then a dynamic-programming beat tracker (Ellis 2007, as in librosa) that
+  follows tempo changes.
+- **Bars**: the 4/4 bar phase, from bass hits and chord changes.
+- **Sections**: per-bar energy (loudness, bass, onset density), plus novelty in timbre, harmony
+  and the 16-step drum pattern.
+- **Singer**: centre-panned energy in the voice range combined with pitch movement (vibrato and
+  slides, which synths, bass and keys don't have).
+- **Tempo changes**: local tempo every second; lasting changes of more than 6 % become scene
+  changes.
+- **Drum hits**: kicks, snares / claps and hi-hats per frequency band, plus accents and drops.
+- **Curves**: a 64-band spectrum and a vocal-volume curve at 60 fps, in the same units as the
+  original's hand-made data.
+- Uploads are decoded at a fixed 22,050 Hz, so the analysis is identical on every computer.
+
+</details>
+
+<details>
+<summary><b>Choreography</b>: fitting 23 hand-timed scenes to a new song</summary>
+
+The original runs intro → verse → chorus → verse → chorus → bridge → break → chorus → bridge →
+outro. A dynamic-programming fit places those parts on the new song's bars: high-energy scenes
+land on choruses and drops, the "break" freeze lands on the biggest breakdown before a big
+return, and the outro fades with the song's end. Each scene change is then pulled onto the
+nearest strong musical event within about a bar: the singer coming in or stopping, a tempo
+change, or a rhythm change.
+
+In the original, some scenes leave things behind for the scene that follows them (words floating
+in the air, a flattened ground, spotlights left on). When a show changes the order, short
+transitions clean up: the words explode, the ground grows back, the spotlights switch off.
+
+</details>
+
+<details>
+<summary><b>Sync</b>: why it feels locked to the beat</summary>
+
+Gliding motion reads as late even when it starts on time, so every reaction is **instant on the
+beat** and fades within about 0.15–0.3 s:
+
+| Musical event | Reaction |
+| --- | --- |
+| Beat (harder on the bar's first beat) | Camera zoom-punch and dip; sky, spotlights and terrain flash; ground dots pump; spotlights jump to their next position |
+| Clap / snare on beats 2 and 4 | White sparks on the ground |
+| Hi-hat on a beat or half-beat | Stars sparkle |
+| Accent on a beat | Balls inflate / deflate |
+| Singer comes in | The voice's sparkler flares, stars burst |
+| Drop, return after a break | The whole ground flashes white, strongest zoom |
+| Loudness | The camera cruises slower in quiet parts, faster in loud ones |
+
+Off-beat kicks and percussion fills are left out, so the picture pulses instead of flickering.
+Visuals are drawn about 35 ms ahead of the player's position, the time a frame takes to reach
+the screen. Chrome's player position already includes the sound card's latency, and `T`
+measures any extra delay added by wireless speakers.
+
+Live audio uses a real-time tempo estimate and a phase-locked beat clock that fires predicted
+beats slightly early. The singer coming in, or a lasting tempo change, starts the next scene on
+the following bar.
+
+</details>
+
+## 📏 Measured
+
+| What | Result |
+| --- | --- |
+| Tempo of the original song | 120.2 BPM (actual: 120) |
+| Break, final chorus and outro vs. the original's hand-made timing | within 0.5 s |
+| Singer detection vs. the original's real vocal track | 98 % of "singing" frames correct; first entry at 7.3 s (real: 7.2 s), last note at about 200 s (real: 200.25 s) |
+| Tempo changes on a 90 → 120 → 100 BPM test track | found at 63.9 s and 128.8 s (real: 64 s and 128 s) |
+| Big visual changes landing on the beat, per scene | 83–100 %, measured from the rendered frames |
+
+## 💻 Run locally
+
+There's no build step, but the page needs a local web server (browsers block the analyzer and
+the image reads on `file://`). In this folder:
 
 ```bash
 python3 serve.py
 ```
 
-Then open <http://localhost:8000> in **Chrome** or **Edge** (needed for "Playing audio";
-upload and microphone also work in Safari / Firefox). Stop the server with `Ctrl+C`.
-`serve.py` is `python3 -m http.server` that only listens on this computer and tells the
-browser not to cache, so updates show up on a normal reload. Any static web server works too.
+Then open <http://localhost:8000>. On macOS you can also double-click **`start.command`**.
+Songs dropped into **`my-music/`** appear as buttons in the picker and stay out of git.
 
-**Your own songs:** put audio files in `my-music/`. Each one appears as a button in the
-picker. The folder is ignored by git, so your music never gets committed.
+```text
+js/smart/analyzer-worker.js   song analysis (Web Worker)
+js/smart/SmartLights.js       picker, shows, beat-locked reactions, live engine
+css/smart.css                 picker and HUD styles
+serve.py, start.command       local no-cache server and launcher
+my-music/                     your own songs (git-ignored)
+docs/                         images for this README
+```
 
-**Using it:** pick a source in the panel (**Upload a song**, a song from `my-music/`, or drag a
-file onto the page), wait a few seconds for the analysis, then press **PLAY**. The panel shows
-the song's sections, where the singer is heard, where the scene changes and why, and which
-show the song got. **Remix** (or `R` on the start screen) switches to another show.
+Everything is layered on top of the original code by patching its prototypes at load time. The
+original files are untouched, except `index.html` (it loads the new files and drops the original
+site's analytics snippet) and a one-line fix to the end-of-song fade, which assumed a 210-second
+song.
 
-## Music sources
+## ⚠️ Limitations
 
-| Source | How it works |
-| --- | --- |
-| **Upload a song** (or drag & drop) | The whole file is analyzed before playback (a few seconds), then the light show is laid out on the song's structure. MP3, WAV, OGG, M4A, FLAC; whatever the browser can decode. |
-| **Playing audio** | Captures a browser tab or the whole screen with its sound (Chrome / Edge desktop; tick **Share audio** in the picker). Analyzed in real time. |
-| **Microphone** | Real-time analysis of whatever the mic hears (speakers in the room, a live band…). |
-| **Original song** | The untouched original experience with its hand-made timing. |
+- Capturing system-wide audio depends on the browser and the OS. On macOS, sharing a tab is the
+  reliable option, or route system audio into a virtual input such as BlackHole and pick
+  **Microphone**.
+- The scene fitting assumes 4/4 and a pop or electronic build. Free-tempo music still pulses with
+  the beats and energy, but its sections are rougher.
+- Vocal detection doesn't use machine learning: a centre-panned lead instrument with vibrato
+  (clarinet, violin, ney) can count as singing.
+- Tested in desktop Chrome. Other browsers may work but haven't been tested.
 
-After a song ends, **REPLAY** plays it again and **NEW SONG** opens the picker.
-During playback: `Esc` or the ✕ button goes back (in live mode it plays the outro first),
-`H` toggles a small HUD with the current section, BPM and phase, and `[` / `]` move the
-visuals 10 ms later / earlier. Use them if your speakers add delay (Bluetooth, TV), and the
-setting is remembered.
-
-## What gets analyzed
-
-Uploaded files (`js/smart/analyzer-worker.js`, runs in a Web Worker):
-
-- **Tempo**: onset-strength autocorrelation, then a dynamic-programming beat tracker
-  (Ellis 2007 / librosa style). Beats drive every pulse event in the scene.
-- **Bars & downbeats**: 4/4 bar phase picked from bass hits and chord changes.
-- **Energy per bar**: loudness + bass presence + onset density, normalized within the song.
-- **Section boundaries**: timbre / harmony / energy novelty between neighbouring bars, plus
-  **rhythm changes** (16-step drum pattern and kick / snare / hi-hat density per bar).
-- **Singer**: lead-vocal detection from centre-panned energy in the voice range combined with
-  pitch movement (vibrato and slides, which synths, bass and keys don't have). On the original
-  song, whose authors shipped the real vocal track, it marks 98 % of frames correctly as singing
-  and finds the first entry at 7.4 s (real: 7.2 s) and the last note at 200.3 s (real: 200.25 s).
-- **Tempo changes**: local tempo every second over 6 s windows; real tempo changes (> 6 %,
-  lasting) are detected and the beat tracker follows them. On a 90 → 120 → 100 BPM test
-  track the changes are found at 63.9 s and 128.8 s (real: 64 s and 128 s).
-- **Choreography mapping**: the original experience has 23 phases grouped into
-  intro → verse → chorus → verse → chorus → bridge → break → chorus → bridge → outro.
-  A dynamic-programming fit places those sections on the song's bars so that high-energy
-  scenes land on choruses and drops, the "break" freeze lands on the biggest breakdown right
-  before a big return, and the outro fades with the song's end. **Scene changes are pulled onto
-  musical events**: the singer coming in (strongest after an instrumental stretch), the singer
-  stopping, a tempo change, or a rhythm change. Every phase change then snaps to the beat
-  nearest to such an event within about a bar. The panel's timeline shows the vocal parts (white)
-  and why each scene starts there (pink: singer, yellow: tempo, cyan: rhythm).
-- **Voice volume** (the glowing trail you steer): vocal-range energy of the centre channel,
-  dimmed where nobody sings; its sparkler flares and the stars burst when the singer comes in.
-- **Spectrum** (the terrain waves in the bridge sections): 64 log-spaced bands, auto-gained
-  per band so quiet and loud masters look the same.
-- **Camera speed** scales with the tempo (the original was built for 120 BPM).
-- **Album art**: an embedded MP3 cover is drawn into the dot "avatars" on the terrain.
-- Uploads are decoded at a fixed 22,050 Hz, so the analysis is identical on every computer.
-
-**Shows** (`Show` in `js/smart/SmartLights.js`): every song keeps the outline found by the
-analysis, but which scene plays each part varies. The three chorus scenes (light trails and
-words, avatars, spotlights) come in any order and the two bridge scenes either way round,
-giving 12 shows. Each show also has its own camera heights, angles and zoom per scene, and its
-own sky colour. A song gets its own show by default; REMIX steps through the others and is
-remembered per song. Scenes in the original hand over state to the scene that followed them
-(words floating in the air, a flattened ground, spotlights left on), so when the order
-changes, a short transition cleans up: the words explode, the ground grows back, the
-spotlights switch off. The original song keeps its original order.
-
-**Beat-locked motion** (`Groove` in `js/smart/SmartLights.js`): motions that follow the music
-move on the beat instead of drifting. Gliding motion reads as late, even when it starts on
-time, so:
-- Spotlights move like concert moving heads: on every beat each one snaps (in about 0.1 s) to
-  the next position of its pattern and holds. The first beat of a bar throws them wide, and the
-  beams cross in between. In quiet passages they move every other beat.
-- Ground dots pump in size and the terrain brightens on every beat, stronger on the bar.
-- New ground circles are born on each bar's first beat, words float on 2- or 4-bar cycles, and
-  the sky colour sweeps over 4 bars.
-- Balls change shape fast enough to land on the beat.
-
-**Hit-level sync****Hit-level sync** (the `Pulse` layer in `js/smart/SmartLights.js`): the analyzer also
-finds every kick, snare/clap, hi-hat and accent, plus a loudness curve and the "impact"
-moments where a section explodes (drops, chorus entries, the return after a break). Each
-gets a visible reaction in every section of the show:
-
-| Musical event | Visual reaction |
-| --- | --- |
-| Beat (stronger on the first beat of each bar) | Instant camera zoom-punch and dip; sky, spotlights and terrain flash; ground dots pump; spotlights jump to their next position |
-| Clap / snare on beats 2 and 4 | White sparks on the ground |
-| Hi-hat on a beat or half-beat | Stars sparkle in groups |
-| Accent on a beat | Balls inflate / deflate, light flash |
-| Singer comes in | The voice's sparkler flares, stars burst |
-| Impact (drop, return after a break) | Whole ground flashes white, strongest zoom |
-| Loudness | Camera cruises slower in quiet parts and faster in loud ones; sky and stars dim and brighten |
-
-Every reaction is instant on the beat and fades within ~0.15–0.3 s, and only on-beat events
-trigger anything (off-beat kicks and percussion fills are left out), so the picture pulses
-with the song instead of flickering.
-
-Visuals are drawn ~35 ms ahead of the player's position (the time a frame takes to reach the
-screen). Chrome's player position already includes the sound card's latency. Speakers that add
-their own delay (Bluetooth headphones, TVs) can be calibrated: press `T` while a song plays and
-tap Space on the beat 8 times. `[` and `]` fine-tune by 10 ms. Both are remembered.
-
-Live audio (`LiveEngine` in `js/smart/SmartLights.js`): real-time tempo estimate,
-a phase-locked beat clock that snaps to detected onsets, and a director that advances
-phases on bar boundaries when the energy changes. The singer coming in (live vocal detection
-with the same centre + pitch-movement method) or a lasting tempo change starts the next phase
-on the following bar; the intro ends when the singer starts. A sudden rise in a verse jumps to
-the chorus scenes, a breakdown triggers the break, and the return of the beat triggers the
-big final-chorus scene. Phases loop for as long as the audio keeps playing.
-
-Tested with the original song: the detected tempo is 119.7 BPM (actual 120), and the break,
-final chorus, bridge and outro land within a quarter second of the hand-made timing. On a
-synthetic EDM track with a known structure, every drop, break and the outro was placed on
-the correct bar.
-
-## Files
-
-- `js/smart/analyzer-worker.js`: offline analysis (new)
-- `js/smart/SmartLights.js`: song picker, live engine, patches to the original prototypes (new)
-- `css/smart.css`: picker / HUD styles (new)
-- `start.command`, `serve.py`: local launcher and no-cache local server (new)
-- `my-music/`: your own songs, git-ignored (new)
-- `index.html`: loads the new files, removed the original site's analytics snippet
-- `js/Lights.js`, `js/lights/tiles/CannonManager.js`: the end-of-song fade used a fixed
-  208 s, now relative to the song's end
-
-The original code is otherwise untouched; everything is applied by patching prototypes
-at load time.
-
-## Limitations
-
-- System-wide audio capture depends on browser and OS. Chrome / Edge on Windows can share
-  system audio; on macOS, tab audio is the reliable option. Alternatively, route system
-  audio into a virtual input device (e.g. BlackHole) and pick **Microphone**.
-- Section mapping assumes 4/4 and a pop/electronic-like build. Free-tempo music (classical,
-  ambient) still gets beats and energy, but the section mapping is rougher.
-- Vocal detection has no machine-learning model. A centre-panned lead instrument with vibrato
-  (clarinet, violin, ney) can count as "singing", and a mono recording relies on pitch
-  movement alone. Choruses that are fairly dense can also hide short vocal pauses.
-- Songs shorter than about 30 s fall back to evenly spaced sections.
-
-## Credits
+## 🙏 Credits
 
 The original experience is by [HelloEnjoy](http://helloenjoy.com) (Carlos Ulloa) for Ellie
 Goulding's *Lights* (© 2011 Cherrytree Records / Polydor). The upstream repository has no
-license file, so the original code, images and music remain with their authors. The additions
-in this fork are `js/smart/`, `css/smart.css`, `serve.py` and `start.command`.
+license file, so the original code, images and music remain with their authors. The additions in
+this fork are `js/smart/`, `css/smart.css`, `serve.py`, `start.command` and `docs/`.
