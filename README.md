@@ -5,7 +5,10 @@ experience made for Ellie Goulding's *Lights*). The original visuals are driven 
 hand-made for that one song. This edition analyzes **any song** and drives the same
 choreography from it.
 
-## Run
+**Live demo:** <https://danialza.github.io/Lights/> (desktop Chrome or Edge recommended).
+Uploaded songs are analyzed in your browser and never leave your computer.
+
+## Run locally
 
 The page has to be served over http (opening `index.html` directly as a file won't work,
 because the browser blocks the audio analyzer and the image reads on `file://`).
@@ -166,6 +169,10 @@ at load time.
   (clarinet, violin, ney) can count as "singing", and a mono recording relies on pitch
   movement alone. Choruses that are fairly dense can also hide short vocal pauses.
 - Songs shorter than about 30 s fall back to evenly spaced sections.
-- The upstream repository has no license file; the original code, images and music belong to
-  their authors (HelloEnjoy, Cherrytree / Polydor). Keep this for personal use unless you have
-  permission.
+
+## Credits
+
+The original experience is by [HelloEnjoy](http://helloenjoy.com) (Carlos Ulloa) for Ellie
+Goulding's *Lights* (© 2011 Cherrytree Records / Polydor). The upstream repository has no
+license file, so the original code, images and music remain with their authors. The additions
+in this fork are `js/smart/`, `css/smart.css`, `serve.py` and `start.command`.
