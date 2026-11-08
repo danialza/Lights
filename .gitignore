@@ -1,0 +1,8 @@
+# Personal songs stay local (see my-music/README.md)
+my-music/*
+!my-music/README.md
+
+.DS_Store
+__pycache__/
+.dev/
+.memsearch/
