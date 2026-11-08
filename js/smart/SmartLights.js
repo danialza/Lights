@@ -266,7 +266,9 @@ function useOriginal() {
 	} );
 }
 
-function useFile( file ) {
+function useFile( file, options ) {
+
+	options = options || {};
 
 	if( Smart.busy || ! file )
 		return;
@@ -323,6 +325,12 @@ function useFile( file ) {
 				Smart.cover = cover;
 				Show.choose( result, title );
 				setSource( 'file', audio, title );
+
+				// Uploaded songs are kept in this browser so the page can offer them next time
+				if( options.remember )
+					SongStore.save( file, title ).then( function() { UI.listMine(); } );
+				else if( options.savedId )
+					SongStore.touch( options.savedId );
 			} );
 		} );
 
@@ -418,6 +426,184 @@ Smart.useStream = function( stream, title ) {
 	unsetSource();
 	startLive( stream, title || 'Live audio' );
 };
+// Songs the visitor added, kept in this browser's IndexedDB. Nothing is uploaded anywhere:
+// opening the page again on the same computer just offers them as buttons and loads the
+// most recent one.
+var SongStore = {
+
+	maxSongs: 8,
+	maxBytes: 200 * 1024 * 1024,
+
+	open: function() {
+
+		if( this.ready )
+			return this.ready;
+
+		this.ready = new Promise( function( resolve ) {
+
+			try {
+
+				var request = indexedDB.open( 'lights-smart', 1 );
+
+				request.onupgradeneeded = function() {
+
+					request.result.createObjectStore( 'songs', { keyPath: 'id' } );
+				};
+				request.onsuccess = function() { resolve( request.result ); };
+				request.onerror = function() { resolve( null ); };
+				request.onblocked = function() { resolve( null ); };
+			}
+			catch( e ) {
+
+				resolve( null );
+			}
+		} );
+
+		return this.ready;
+	},
+
+	// Newest first, without the audio data
+	list: function() {
+
+		return this.open().then( function( db ) {
+
+			return new Promise( function( resolve ) {
+
+				if( ! db )
+					return resolve( [] );
+
+				try {
+
+					var songs = [],
+						cursor = db.transaction( 'songs' ).objectStore( 'songs' ).openCursor();
+
+					cursor.onsuccess = function( e ) {
+
+						var c = e.target.result;
+
+						if( c ) {
+
+							songs.push( { id: c.value.id, name: c.value.name, title: c.value.title, size: c.value.size, used: c.value.used } );
+							c.continue();
+						}
+						else {
+
+							resolve( songs.sort( function( a, b ) { return b.used - a.used; } ) );
+						}
+					};
+					cursor.onerror = function() { resolve( [] ); };
+				}
+				catch( e ) {
+
+					resolve( [] );
+				}
+			} );
+		} );
+	},
+
+	request: function( mode, work ) {
+
+		return this.open().then( function( db ) {
+
+			return new Promise( function( resolve ) {
+
+				if( ! db )
+					return resolve( null );
+
+				try {
+
+					var tx = db.transaction( 'songs', mode ),
+						result = work( tx.objectStore( 'songs' ) );
+
+					tx.oncomplete = function() { resolve( result && result.result !== undefined ? result.result : null ); };
+					tx.onerror = tx.onabort = function() { resolve( null ); };
+				}
+				catch( e ) {
+
+					resolve( null );
+				}
+			} );
+		} );
+	},
+
+	get: function( id ) {
+
+		return this.request( 'readonly', function( store ) { return store.get( id ); } );
+	},
+
+	save: function( file, title ) {
+
+		var self = this;
+
+		if( ! file || file.size > 60 * 1024 * 1024 )
+			return Promise.resolve();
+
+		return this.request( 'readwrite', function( store ) {
+
+			store.put( { id: file.name + '|' + file.size, name: file.name, title: title || '', type: file.type, size: file.size, blob: file, used: Date.now() } );
+
+		} ).then( function() {
+
+			// Keep the newest few, within a size budget
+			return self.list();
+
+		} ).then( function( songs ) {
+
+			var total = 0, drop = [];
+
+			songs.forEach( function( song, i ) {
+
+				total += song.size;
+
+				if( i >= self.maxSongs || total > self.maxBytes )
+					drop.push( song.id );
+			} );
+
+			return Promise.all( drop.map( function( id ) { return self.remove( id ); } ) );
+		} );
+	},
+
+	touch: function( id ) {
+
+		return this.request( 'readwrite', function( store ) {
+
+			var req = store.get( id );
+
+			req.onsuccess = function() {
+
+				if( req.result ) {
+
+					req.result.used = Date.now();
+					store.put( req.result );
+				}
+			};
+		} );
+	},
+
+	remove: function( id ) {
+
+		return this.request( 'readwrite', function( store ) { store.delete( id ); } );
+	}
+};
+
+function useSaved( id ) {
+
+	if( Smart.busy )
+		return;
+
+	SongStore.get( id ).then( function( song ) {
+
+		if( ! song || ! song.blob ) {
+
+			UI.showError( 'That song is no longer saved in this browser.' );
+			UI.listMine();
+			return;
+		}
+
+		useFile( new File( [ song.blob ], song.name, { type: song.type || song.blob.type || 'audio/mpeg' } ), { savedId: id } );
+	} );
+}
+
 function useUrl( url, name ) {
 
 	if( Smart.busy )
@@ -571,7 +757,7 @@ function runAnalyzer( prepared ) {
 
 	return new Promise( function( resolve, reject ) {
 
-		var worker = new Worker( 'js/smart/analyzer-worker.js?v=9' );
+		var worker = new Worker( 'js/smart/analyzer-worker.js?v=10' );
 
 		worker.onmessage = function( e ) {
 
@@ -3058,7 +3244,7 @@ var UI = LIGHTS.SmartUI = {
 				'<button type="button" class="sp-btn sp-ghost" data-act="original">Original song</button>' +
 			'</div>' +
 			'<div class="sp-mine" hidden></div>' +
-			'<div class="sp-hint">or drop a file anywhere · MP3 · WAV · OGG · M4A · FLAC</div>' +
+			'<div class="sp-hint">or drop a file anywhere · MP3 · WAV · OGG · M4A · FLAC · songs stay on your computer</div>' +
 			'<div class="sp-status" hidden>' +
 				'<div class="sp-status-text"></div>' +
 				'<div class="sp-bar"><div class="sp-bar-fill"></div></div>' +
@@ -3086,7 +3272,7 @@ var UI = LIGHTS.SmartUI = {
 		input.addEventListener( 'change', function() {
 
 			if( input.files && input.files[ 0 ] )
-				useFile( input.files[ 0 ] );
+				useFile( input.files[ 0 ], { remember: true } );
 
 			input.value = '';
 		} );
@@ -3108,6 +3294,8 @@ var UI = LIGHTS.SmartUI = {
 				case 'change':   UI.openPicker(); break;
 				case 'remix':    UI.remix(); break;
 				case 'mine':     useUrl( btn.getAttribute( 'data-url' ), btn.textContent ); break;
+				case 'saved':    useSaved( btn.getAttribute( 'data-id' ) ); break;
+				case 'forget':   SongStore.remove( btn.getAttribute( 'data-id' ) ).then( function() { UI.listMine(); } ); break;
 			}
 		} );
 
@@ -3170,7 +3358,7 @@ var UI = LIGHTS.SmartUI = {
 			if( file ) {
 
 				UI.openPicker( true );
-				useFile( file );
+				useFile( file, { remember: true } );
 			}
 		} );
 
@@ -3193,7 +3381,7 @@ var UI = LIGHTS.SmartUI = {
 			}
 		} );
 
-		this.listMine();
+		this.listMine( true );
 
 		this.status = panel.querySelector( '.sp-status' );
 		this.statusText = panel.querySelector( '.sp-status-text' );
@@ -3336,22 +3524,34 @@ var UI = LIGHTS.SmartUI = {
 		this.toast( 'Show ' + ( Show.index + 1 ) + ' of ' + SHOWS.length );
 	},
 
-	// Songs in the local my-music/ folder (listed by the local web server) get their own buttons
-	listMine: function() {
+	// "Your songs": songs saved in this browser, plus songs in the local my-music/ folder (listed
+	// by the local web server). On first load, the most recently used saved song is prepared
+	// right away so PLAY works at once.
+	listMine: function( autoload ) {
 
-		var box = this.panel.querySelector( '.sp-mine' );
+		var box = this.panel.querySelector( '.sp-mine' ),
+			self = this;
 
-		if( ! window.fetch )
-			return;
-
-		fetch( 'my-music/' ).then( function( r ) {
+		var folder = window.fetch ? fetch( 'my-music/' ).then( function( r ) {
 
 			return r.ok ? r.text() : '';
 
-		} ).then( function( html ) {
+		} ).catch( function() { return ''; } ) : Promise.resolve( '' );
 
-			var re = /href="([^"?#]+\.(mp3|wav|ogg|oga|m4a|aac|flac|opus|webm))"/gi,
+		Promise.all( [ SongStore.list(), folder ] ).then( function( found ) {
+
+			var saved = found[ 0 ], html = found[ 1 ],
+				re = /href="([^"?#]+\.(mp3|wav|ogg|oga|m4a|aac|flac|opus|webm))"/gi,
 				seen = {}, items = [], m;
+
+			saved.forEach( function( song ) {
+
+				var name = song.title || cleanTag( song.name.replace( /\.[^.]+$/, '' ) ) || song.name;
+
+				items.push( '<span class="sp-chip-wrap"><button type="button" class="sp-chip" data-act="saved" data-id="' + escapeHtml( song.id ) +
+					'" title="Saved in this browser">' + escapeHtml( name ) + '</button><button type="button" class="sp-forget" data-act="forget" data-id="' +
+					escapeHtml( song.id ) + '" title="Forget this song" aria-label="Forget ' + escapeHtml( name ) + '">&#x2715;</button></span>' );
+			} );
 
 			while( ( m = re.exec( html ) ) ) {
 
@@ -3360,19 +3560,19 @@ var UI = LIGHTS.SmartUI = {
 
 				seen[ m[ 1 ] ] = true;
 
-				var name = cleanTag( decodeURIComponent( m[ 1 ].split( '/' ).pop() ).replace( /\.[^.]+$/, '' ) ) || m[ 1 ];
+				var fileName = decodeURIComponent( m[ 1 ].split( '/' ).pop() ),
+					label = cleanTag( fileName.replace( /\.[^.]+$/, '' ) ) || fileName;
 
 				items.push( '<button type="button" class="sp-chip" data-act="mine" data-url="my-music/' + m[ 1 ].split( '/' ).pop() +
-					'">' + escapeHtml( name ) + '</button>' );
+					'" title="From the my-music folder">' + escapeHtml( label ) + '</button>' );
 			}
 
-			if( items.length ) {
+			box.innerHTML = items.length ? '<span class="sp-mine-label">Your songs</span>' + items.join( '' ) : '';
+			box.hidden = ! items.length;
 
-				box.innerHTML = '<span class="sp-mine-label">Your songs</span>' + items.join( '' );
-				box.hidden = false;
-			}
-
-		} ).catch( function() {} );
+			if( autoload && saved.length && ! Smart.mode && ! Smart.busy )
+				useSaved( saved[ 0 ].id );
+		} );
 	},
 
 	onPlay: function() {

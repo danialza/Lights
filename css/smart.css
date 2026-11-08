@@ -366,6 +366,38 @@ body.smart-playing #smart_panel {
 	background: rgba( 20, 212, 255, 0.18 );
 }
 
+.sp-chip-wrap {
+	display: inline-flex;
+	align-items: center;
+}
+
+.sp-chip-wrap .sp-chip {
+	border-radius: 999px 0 0 999px;
+}
+
+.sp-forget {
+	height: 100%;
+	min-height: 27px;
+	padding: 0 9px 0 7px;
+	border: 1px solid rgba( 20, 212, 255, 0.45 );
+	border-left: 0;
+	border-radius: 0 999px 999px 0;
+	background: rgba( 20, 212, 255, 0.04 );
+	color: var( --sp-muted );
+	font-size: 11px;
+	cursor: pointer;
+}
+
+.sp-forget:hover {
+	color: #ff8aa8;
+	background: rgba( 255, 21, 97, 0.12 );
+}
+
+.sp-forget:focus-visible {
+	outline: 2px solid var( --sp-cyan );
+	outline-offset: 2px;
+}
+
 .sp-chip:disabled {
 	opacity: 0.35;
 	cursor: default;
